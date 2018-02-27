@@ -1,0 +1,132 @@
+#!/bin/sh
+
+# Download 'Picture of the day' from Yandex.Images with it's short description.
+# Set image as a desktop wallpaper.
+# Show description in system notify window
+
+NAME=$(basename $0)
+
+log_msg() {
+	[ "$1" ] && logger "$NAME: $*"
+}
+
+log_error() {
+	[ "$1" ] && logger -p user.error "$NAME ERROR: $*"
+}
+
+error() {
+	log_error "$*"
+	exit 1
+}
+
+file_mime_type() {
+	echo $(file --mime-type "$*" | rev | cut -d' ' -f 1 | rev) 
+}
+
+mime_main_type() {
+	echo $1 | cut -d'/' -f 1
+}
+
+mime_subtype() {
+	echo $1 | cut -d'/' -f 2
+}
+
+is_not_image() {
+	if [ $(mime_main_type $(file_mime_type "$1")) != "image" ] ; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+files_matching_pattern_exist () {
+	if ls $* 1> /dev/null 2>&1 ; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+# Give desktop environment time to be loaded and initialized
+# completly and to be ready to show the notification
+#sleep 15
+
+GNOME_VERSION=$( gnome-session --version | cut -d ' ' -f 2 | cut -d '.' -f 1 )
+if [ ! $GNOME_VERSION ] ; then
+	error Cannot determine Gnome version
+fi
+case $GNOME_VERSION in
+	[0-9]*) ;;
+	*) error Strange Gnome version: \"$GNOME_VERSION\" ;;
+esac
+if [ $GNOME_VERSION -lt 3 ] ; then
+	error "This script is for Gnome version 3 and newer"
+fi
+
+URL="https://yandex.ru/images/today?size=1920x1200"
+
+PICTURE_PATH=~/Pictures/wallpapers/auto/1920x1200
+DEFAULT_PICTURE=$PICTURE_PATH/default1920x1200.png
+PICTURE_PREFIX="auto_wallpaper_"
+
+today=$(date +%Y-%m-%d)
+pic_basename="$PICTURE_PREFIX$today.jpg"
+picture=$PICTURE_PATH/$pic_basename
+
+# check is picture exist
+if files_matching_pattern_exist "${picture}" ; then
+	log_msg "${picture} exist, skip download"
+else
+	curl -s "$URL" > ${picture}
+	# If server returns any "404 page", curl outputs it contetnts instead
+	# of picture, so 'is_not_image' check is needed
+	errorcode = $?
+	if [ $errorcode -ne 0 ] ||  [ ! -e ${picture} ] || is_not_image "${picture}" ; then
+		if [ $errorcode -ne 0 ] ; then
+			log_error "curl exit code ${errorcode}"
+		fi
+		if [ -e ${picture} ] ; then
+			rm ${picture}
+		fi
+		log_msg "setting default picture"
+		picture=$DEFAULT_PICTURE
+		errorflag=was_error
+	fi
+fi
+
+gsettings set org.gnome.desktop.background picture-uri "file://${picture}"
+
+if [ $was_error ] ; then
+	# No picture -- don't need its description
+	exit 0
+fi
+
+TEXT_DESC_FILE="$PICTURE_PATH/ydw_text_$today.txt"
+
+if [ ! -e $TEXT_DESC_FILE ] || [ -z `cat $TEXT_DESC_FILE` ] ; then
+	links -dump -codepage utf-8 "yandex.ru/images" \
+		| awk '/Картинка дня:/ { \
+			print; \
+			getline; \
+			while (1) { \
+				getline tmp; \
+				if (tmp == "") exit;
+				else print tmp;
+			}
+		}' \
+		| sed 's/^ \+//' \
+		| sed '1s/,$//' \
+		> $TEXT_DESC_FILE
+
+#		# It's probably a first invocation on login so give desktop
+#		# environment time to be loaded and initialized completly
+#		# and to be ready to show the notification
+		sleep 15
+fi
+
+if [ -e $TEXT_DESC_FILE ] ; then
+	notify-send \
+		"$(head -1 $TEXT_DESC_FILE)" \
+		"$(tail -n +2 $TEXT_DESC_FILE)"
+fi
+
