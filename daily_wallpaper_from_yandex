@@ -1,8 +1,8 @@
 #!/bin/sh
 
-# Download 'Picture of the day' from Yandex.Images with it's short description.
-# Set image as a desktop wallpaper.
-# Show description in system notify window
+# Download a 'Picture of the day' from Yandex.Images
+# with it's short description. Set the image as a desktop wallpaper.
+# Show the description in the system notify window.
 
 NAME=$(basename $0)
 
