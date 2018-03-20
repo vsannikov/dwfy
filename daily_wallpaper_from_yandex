@@ -4,6 +4,8 @@
 # with it's short description. Set the image as a desktop wallpaper.
 # Show the description in the system notify window.
 
+set -x
+
 NAME=$(basename $0)
 
 log_msg() {
@@ -104,18 +106,10 @@ fi
 TEXT_DESC_FILE="$PICTURE_PATH/ydw_text_$today.txt"
 
 if [ ! -e $TEXT_DESC_FILE ] || [ -z `cat $TEXT_DESC_FILE` ] ; then
-	links -dump -codepage utf-8 "yandex.ru/images" \
-		| awk '/Картинка дня:/ { \
-			print; \
-			getline; \
-			while (1) { \
-				getline tmp; \
-				if (tmp == "") exit;
-				else print tmp;
-			}
-		}' \
-		| sed 's/^ \+//' \
-		| sed '1s/,$//' \
+	curl --location --silent "yandex.ru/images" \
+		| sed 's/<a /\n&/g;s/<\\a>/&\n/g' | sed '/^<a/!d' \
+		| grep /kartinka-dnia/ \
+		| sed 's/.*alt="//;s/\.$//;s/, /\n/' \
 		> $TEXT_DESC_FILE
 
 #		# It's probably a first invocation on login so give desktop
