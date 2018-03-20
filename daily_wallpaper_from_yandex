@@ -120,9 +120,10 @@ TEXT_DESC_FILE="$PICTURE_PATH/ydw_text_$today.txt"
 
 if [ ! -e $TEXT_DESC_FILE ] || [ -z `cat $TEXT_DESC_FILE` ] ; then
 	curl --location --silent "yandex.ru/images" \
-		| sed 's/<a /\n&/g;s/<\\a>/&\n/g' | sed '/^<a/!d' \
-		| grep /kartinka-dnia/ \
-		| sed 's/.*alt="//;s/\.$//;s/, /\n/' \
+		| sed 's/<div /\n&/g;s/<\/div/\n&/g' \
+		| sed -n '/incut__image__desc/,/div/ p' \
+		| sed 's/<div class="incut__image__desc">//' \
+		| head -n -1 \
 		> $TEXT_DESC_FILE
 
 #		# It's probably a first invocation on login so give desktop
