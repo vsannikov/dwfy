@@ -8,30 +8,37 @@ set -x
 
 NAME=$(basename $0)
 
+
 log_msg() {
 	[ "$1" ] && logger "$NAME: $*"
 }
 
+
 log_error() {
 	[ "$1" ] && logger -p user.error "$NAME ERROR: $*"
 }
+
 
 error() {
 	log_error "$*"
 	exit 1
 }
 
+
 file_mime_type() {
 	echo $(file --mime-type "$*" | rev | cut -d' ' -f 1 | rev) 
 }
+
 
 mime_main_type() {
 	echo $1 | cut -d'/' -f 1
 }
 
+
 mime_subtype() {
 	echo $1 | cut -d'/' -f 2
 }
+
 
 is_not_image() {
 	if [ $(mime_main_type $(file_mime_type "$1")) != "image" ] ; then
@@ -40,6 +47,7 @@ is_not_image() {
 		return 1
 	fi
 }
+
 
 files_matching_pattern_exist () {
 	if ls $* 1> /dev/null 2>&1 ; then
@@ -65,11 +73,13 @@ if [ $GNOME_VERSION -lt 3 ] ; then
 	error "This script is for Gnome version 3 and newer"
 fi
 
+
 URL="https://yandex.ru/images/today?size=1920x1200"
 
 PICTURE_PATH=~/Pictures/wallpapers/auto/1920x1200
 DEFAULT_PICTURE=$PICTURE_PATH/default1920x1200.png
 PICTURE_PREFIX="auto_wallpaper_"
+
 
 today=$(date +%Y-%m-%d)
 pic_basename="$PICTURE_PREFIX$today.jpg"
@@ -96,12 +106,15 @@ else
 	fi
 fi
 
+
 gsettings set org.gnome.desktop.background picture-uri "file://${picture}"
+
 
 if [ $was_error ] ; then
 	# No picture -- don't need its description
 	exit 0
 fi
+
 
 TEXT_DESC_FILE="$PICTURE_PATH/ydw_text_$today.txt"
 
