@@ -57,6 +57,16 @@ files_matching_pattern_exist () {
 	fi
 }
 
+
+get_picture_description () {
+	curl --location --silent "yandex.ru/images" \
+		| sed 's/<div /\n&/g;s/<\/div/\n&/g' \
+		| sed -n '/incut__image__desc/,/div/ p' \
+		| sed 's/<div class="incut__image__desc">//' \
+		| head -n -1
+}
+
+
 # Give desktop environment time to be loaded and initialized
 # completly and to be ready to show the notification
 #sleep 15
@@ -119,17 +129,12 @@ fi
 TEXT_DESC_FILE="$PICTURE_PATH/ydw_text_$today.txt"
 
 if [ ! -e $TEXT_DESC_FILE ] || [ -z `cat $TEXT_DESC_FILE` ] ; then
-	curl --location --silent "yandex.ru/images" \
-		| sed 's/<div /\n&/g;s/<\/div/\n&/g' \
-		| sed -n '/incut__image__desc/,/div/ p' \
-		| sed 's/<div class="incut__image__desc">//' \
-		| head -n -1 \
-		> $TEXT_DESC_FILE
+	get_picture_description > $TEXT_DESC_FILE
 
-#		# It's probably a first invocation on login so give desktop
-#		# environment time to be loaded and initialized completly
-#		# and to be ready to show the notification
-		sleep 15
+	# It's probably a first invocation on login so give desktop
+	# environment time to be loaded and initialized completly
+	# and to be ready to show the notification
+	sleep 15
 fi
 
 if [ -e $TEXT_DESC_FILE ] ; then
